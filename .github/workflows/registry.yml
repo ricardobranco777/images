@@ -1,0 +1,41 @@
+name: registry
+
+on:
+  push:
+    branches:
+      - "master"
+      - "**"
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  pullpush:
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ['alpine:latest', 'centos:latest', 'debian:latest', 'fedora:latest']
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Login
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Pull and push
+        uses: docker/build-push-action@v4
+        with:
+          file: Dockerfile_${{ matrix.image }}
+          platforms: linux/amd64,linux/arm64,linux/ppc64le,linux/s390x
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ github.actor }}/${{ matrix.image}}
